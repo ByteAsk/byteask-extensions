@@ -1,0 +1,60 @@
+name: Publish VS Code Extension
+
+# Triggered by pushing a tag like `vscode-v0.1.0`, or manually.
+# Publishes to the VS Code Marketplace, Open VSX (Cursor/Windsurf/VSCodium),
+# and attaches the .vsix to a GitHub Release.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   VSCE_PAT   — Azure DevOps PAT with Marketplace > Manage scope
+#   OVSX_TOKEN — Open VSX access token
+# Each publish step is skipped automatically if its secret is absent.
+
+on:
+  push:
+    tags: ['vscode-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+    defaults:
+      run:
+        working-directory: vscode-byteask
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vscode-byteask/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Compile
+        run: npm run compile
+
+      - name: Package .vsix
+        run: npx --yes @vscode/vsce package --no-dependencies -o byteask-vscode.vsix
+
+      - name: Publish to VS Code Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        run: npx --yes @vscode/vsce publish --packagePath byteask-vscode.vsix -p "$VSCE_PAT"
+
+      - name: Publish to Open VSX
+        if: ${{ env.OVSX_TOKEN != '' }}
+        run: npx --yes ovsx publish byteask-vscode.vsix -p "$OVSX_TOKEN"
+
+      - name: Attach .vsix to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vscode-byteask/byteask-vscode.vsix
+          fail_on_unmatched_files: true

@@ -1,0 +1,99 @@
+{
+  "name": "byteask-vscode",
+  "displayName": "ByteAsk",
+  "description": "Drive the ByteAsk C/C++ agentic coding harness from VS Code — interactive terminal, headless exec/review, apply diffs, and fix-diagnostics.",
+  "version": "0.1.0",
+  "publisher": "byteask",
+  "license": "Apache-2.0",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "keywords": [
+    "byteask",
+    "codex",
+    "c++",
+    "cpp",
+    "agent",
+    "coding assistant"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ByteAsk/byteask-extensions.git",
+    "directory": "vscode-byteask"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      { "command": "byteask.open", "title": "ByteAsk: Open Terminal", "category": "ByteAsk" },
+      { "command": "byteask.exec", "title": "ByteAsk: Exec (headless prompt)", "category": "ByteAsk" },
+      { "command": "byteask.execSelection", "title": "ByteAsk: Exec on Selection", "category": "ByteAsk" },
+      { "command": "byteask.review", "title": "ByteAsk: Review Repository", "category": "ByteAsk" },
+      { "command": "byteask.apply", "title": "ByteAsk: Apply Latest Diff", "category": "ByteAsk" },
+      { "command": "byteask.fixDiagnostics", "title": "ByteAsk: Fix Diagnostics in Active File", "category": "ByteAsk" },
+      { "command": "byteask.resumeLast", "title": "ByteAsk: Resume Last Session", "category": "ByteAsk" },
+      { "command": "byteask.resume", "title": "ByteAsk: Resume Session (picker)", "category": "ByteAsk" }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "byteask.execSelection",
+          "when": "editorHasSelection",
+          "group": "byteask@1"
+        },
+        {
+          "command": "byteask.fixDiagnostics",
+          "group": "byteask@2"
+        }
+      ]
+    },
+    "keybindings": [
+      { "command": "byteask.open", "key": "ctrl+alt+b", "mac": "cmd+alt+b" },
+      { "command": "byteask.execSelection", "key": "ctrl+alt+e", "mac": "cmd+alt+e", "when": "editorHasSelection" }
+    ],
+    "configuration": {
+      "title": "ByteAsk",
+      "properties": {
+        "byteask.command": {
+          "type": "string",
+          "default": "byteask",
+          "description": "Path to the ByteAsk CLI executable."
+        },
+        "byteask.model": {
+          "type": "string",
+          "default": "",
+          "description": "Model to pass via -m. Empty = ByteAsk default."
+        },
+        "byteask.extraArgs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Extra CLI arguments always appended (e.g. [\"--oss\"])."
+        },
+        "byteask.autoApply": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run `byteask apply` automatically after a successful headless exec."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  }
+}
