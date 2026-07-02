@@ -50,7 +50,18 @@ jobs:
 
       - name: Publish to Open VSX
         if: ${{ env.OVSX_TOKEN != '' }}
-        run: npx --yes ovsx publish byteask-vscode.vsix -p "$OVSX_TOKEN"
+        # "already published" happens on manual re-runs against an unchanged tag
+        # (e.g. backfilling a later channel like the Marketplace) — not a failure.
+        run: |
+          set +e
+          out=$(npx --yes ovsx publish byteask-vscode.vsix -p "$OVSX_TOKEN" 2>&1)
+          code=$?
+          echo "$out"
+          if [ $code -ne 0 ] && echo "$out" | grep -q "is already published"; then
+            echo "Open VSX: version already published, treating as success."
+            exit 0
+          fi
+          exit $code
 
       - name: Attach .vsix to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
