@@ -11,7 +11,7 @@ editors and every connector inherits new engine capabilities for free.
 
 | Editor | Package | Status |
 |---|---|---|
-| Neovim | [`byteask.nvim`](./byteask.nvim) | ✅ ready |
+| Neovim | [`ByteAsk/ByteAsk.nvim`](https://github.com/ByteAsk/ByteAsk.nvim) (separate repo) | ✅ ready |
 | VS Code | [`vscode-byteask`](./vscode-byteask) | ✅ ready |
 | Zed | `zed-byteask` | 🛠 planned |
 | Emacs | `byteask.el` | 🛠 planned |
@@ -79,6 +79,12 @@ byteask doctor
 2. Start at Tier 1 (terminal) for a working v0, then add Tier 2 headless commands.
 3. Use `byteask doctor` for the editor's health check.
 4. Match the setting names (`command`, `model`, `extraArgs`, `autoApply`).
+
+## For coding agents
+
+See **[`AGENTS.md`](./AGENTS.md)** — the CLI-exact install commands, the
+release process (tag → verify), required secrets and where to get them, and a
+CI gotcha worth reading before touching any workflow file.
 
 ## License
 
