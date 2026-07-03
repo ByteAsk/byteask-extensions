@@ -15,6 +15,10 @@ repo `ByteAsk/ByteAsk.nvim` because Neovim plugin managers require plugin
 code at repo root — see that repo's own `AGENTS.md` for why. All drive the
 same `byteask` CLI.
 
+Each connector is released independently (its own tag prefix, its own
+version file) — see `scripts/release.sh` / `scripts/connectors.conf` and
+"If you're cutting a release" below before hand-typing a `git tag`.
+
 ## If you're installing/using the VS Code extension in a project
 
 It's published on three channels; pick based on which editor:
@@ -67,17 +71,42 @@ Reference implementations: `byteask.nvim/lua/byteask/` (Lua) and
 
 ## If you're cutting a release
 
-Releases are tag-triggered, prefixed `vscode-` to disambiguate from a future
-`zed-v*` / `emacs-v*` tag in the same repo.
+**This repo hosts multiple independently-versioned connectors** (vscode-byteask,
+jetbrains, and more to come), each with its own tag prefix (`vscode-v*`,
+`jetbrains-v*`, ...) and its own version file (package.json, gradle.properties,
+...). Don't hand-type `git tag <prefix>-vX.Y.Z` — that's exactly how a real
+mistake happened: `jetbrains-v0.1.0` got tagged and pushed for a version that
+had already been manually uploaded to the Marketplace, and the publish
+workflow correctly failed on "version already exists" (annoying but harmless
+by itself) -- except a *separate*, now-fixed bug meant that failure also
+silently skipped the GitHub Release step, and nobody would have caught the
+duplicate-version problem locally before pushing.
+
+**Use `scripts/release.sh` instead** — it reads each connector's actual
+current version, refuses to proceed if that version is already tagged
+(locally or on origin), and refuses if the working tree has uncommitted
+changes or local main is behind origin:
 
 ```bash
-cd vscode-byteask   # not required for the tag itself, just context
-git tag -a vscode-vX.Y.Z -m "vscode-vX.Y.Z — <one-line summary>"
-git push origin vscode-vX.Y.Z
+scripts/release-status.sh          # at-a-glance: every connector's version vs. latest tag
+scripts/release.sh vscode           # dry-run: shows the plan, tags nothing
+scripts/release.sh vscode --yes     # actually tags + pushes
+scripts/release.sh --list           # list every registered connector
 ```
 
-This triggers `.github/workflows/vscode-publish.yml`, which packages the
-`.vsix` once and publishes to three destinations in sequence:
+Adding a new connector (Zed, Emacs, Sublime, ...)? Add one line to
+`scripts/connectors.conf` (name, directory, tag prefix, and a shell command
+that prints its current version) — that's the only place this ever needs
+wiring, both scripts read it.
+
+`byteask.nvim` is NOT in this registry — it's a separate repo with its own
+plain `vX.Y.Z` tags (see its own `AGENTS.md`), so it doesn't have the
+multi-connector disambiguation problem this solves.
+
+### VS Code release destinations
+
+`vscode-v*` triggers `.github/workflows/vscode-publish.yml`, which packages
+the `.vsix` once and publishes to three destinations in sequence:
 
 1. **VS Code Marketplace** — `vsce publish`, only if `VSCE_PAT` is set
 2. **Open VSX** (Cursor/Windsurf/VSCodium) — `ovsx publish`, only if
@@ -184,14 +213,15 @@ the newer "Reworked Terminal" engine enabled may not support that cast. Run
 before considering G1 fully done; the fallback (shell opens without
 auto-running the command) is not a crash either way.
 
-Release: tag-prefixed `jetbrains-v*` (own prefix, same convention as
-`vscode-v*`), triggers `jetbrains-publish.yml`. Unlike the VS Code channels,
-**the first-ever version must be uploaded manually** via
+Release: `scripts/release.sh jetbrains --yes` (see "If you're cutting a
+release" above — bumps the version in `gradle.properties` first if 0.1.1
+is already tagged), triggers `jetbrains-publish.yml`. Unlike the VS Code
+channels, **the first-ever version must be uploaded manually** via
 plugins.jetbrains.com before `publishPlugin` can push anything automated —
-do this once, by hand, before relying on the tag-push flow. Every version
-after that (including updates) still goes through JetBrains' own manual
-moderation review (no fixed SLA; budget a few business days) — this is
-slower than the VS Code/Neovim channels, plan hotfix timing accordingly.
+already done as of 0.1.0. Every version after that (including updates)
+still goes through JetBrains' own manual moderation review (no fixed SLA;
+budget a few business days) — this is slower than the VS Code/Neovim
+channels, plan hotfix timing accordingly.
 
 Required secrets: `PUBLISH_TOKEN` (Marketplace vendor dashboard → Permanent
 Tokens), `PRIVATE_KEY` / `PRIVATE_KEY_PASSWORD` / `CERTIFICATE_CHAIN` (plugin
