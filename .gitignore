@@ -1,2 +1,3 @@
 # byteask.nvim is its own repo (github.com/ByteAsk/ByteAsk.nvim), not a subtree here.
 byteask.nvim/
+.gstack/

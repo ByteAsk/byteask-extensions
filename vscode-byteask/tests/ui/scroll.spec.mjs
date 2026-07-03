@@ -23,6 +23,13 @@ import { test, expect } from './fixtures.mjs';
 async function fillWithConversation(chat, turns) {
   for (let i = 0; i < turns; i++) {
     await chat.sendUserMessage(`prior turn ${i}`);
+    // Let this turn's beginAnchor() RAF settle before moving on -- firing
+    // turns back-to-back with zero gap is unrealistic (real usage always has
+    // async network/streaming time between turns) and can race a stale RAF
+    // from turn N into turn N+1's anchor state, which is exactly the bug
+    // class this suite exists to catch, not something worth re-triggering
+    // via unrealistic test pacing.
+    await chat.waitForRaf();
     await chat.post({ type: 'turnStarted' });
     await chat.post({
       type: 'itemCompleted',
@@ -35,6 +42,7 @@ async function fillWithConversation(chat, turns) {
       },
     });
     await chat.post({ type: 'turnCompleted', status: 'completed' });
+    await chat.waitForRaf();
   }
 }
 
