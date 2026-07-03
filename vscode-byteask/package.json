@@ -2,7 +2,7 @@
   "name": "byteask-vscode",
   "displayName": "ByteAsk",
   "description": "Drive the ByteAsk C/C++ agentic coding harness from VS Code — interactive terminal, headless exec/review, apply diffs, and fix-diagnostics.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "byteask",
   "license": "Apache-2.0",
   "icon": "icon.png",
@@ -31,7 +31,19 @@
   "main": "./out/extension.js",
   "activationEvents": [],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        { "id": "byteask", "title": "ByteAsk", "icon": "media/icon.svg" }
+      ]
+    },
+    "views": {
+      "byteask": [
+        { "id": "byteask.chatView", "name": "ByteAsk", "type": "webview" }
+      ]
+    },
     "commands": [
+      { "command": "byteask.chat.focus", "title": "ByteAsk: Open Chat", "category": "ByteAsk" },
+      { "command": "byteask.chat.newThread", "title": "ByteAsk: New Chat", "category": "ByteAsk", "icon": "$(add)" },
       { "command": "byteask.open", "title": "ByteAsk: Open Terminal", "category": "ByteAsk" },
       { "command": "byteask.exec", "title": "ByteAsk: Exec (headless prompt)", "category": "ByteAsk" },
       { "command": "byteask.execSelection", "title": "ByteAsk: Exec on Selection", "category": "ByteAsk" },
@@ -55,7 +67,7 @@
       ]
     },
     "keybindings": [
-      { "command": "byteask.open", "key": "ctrl+alt+b", "mac": "cmd+alt+b" },
+      { "command": "byteask.chat.focus", "key": "ctrl+alt+b", "mac": "cmd+alt+b" },
       { "command": "byteask.execSelection", "key": "ctrl+alt+e", "mac": "cmd+alt+e", "when": "editorHasSelection" }
     ],
     "configuration": {

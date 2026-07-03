@@ -2,6 +2,24 @@
 
 Drive the **[ByteAsk](https://byteask.ai)** C/C++ agentic coding harness from VS Code.
 
+## Chat (primary)
+
+The **ByteAsk** icon in the Activity Bar opens a graphical chat panel — the intended
+default way to use the extension in VS Code or Cursor. Type a message, watch the
+response stream in, and approve or decline proposed file changes and commands with
+inline cards (no terminal, no diff-scraping). It talks to `byteask app-server`
+directly (JSON-RPC over stdio), not the CLI-subcommand path below.
+
+`Ctrl/Cmd+Alt+B` opens/focuses the chat (Command Palette: **ByteAsk: Open Chat**).
+
+Current v1 scope: one thread per workspace session, streaming text + collapsed
+"Thinking" blocks, and Accept/Decline approval cards (file changes show a "View
+diff" link that opens a read-only syntax-highlighted unified diff). Session
+history/resume and a model switcher aren't in the chat panel yet — use the
+terminal-based commands below for those in the meantime.
+
+## Terminal-based commands (still available)
+
 - **ByteAsk: Open Terminal** — the interactive TUI in an integrated terminal.
 - **Exec / Exec on Selection** — headless `byteask exec`; selection is sent as context.
 - **Fix Diagnostics in Active File** — pipe the file's problems into `exec` for a fix.
@@ -28,8 +46,11 @@ byteask doctor
 
 ## Keybindings
 
-- `Ctrl/Cmd+Alt+B` — open the ByteAsk terminal
+- `Ctrl/Cmd+Alt+B` — open/focus the ByteAsk chat panel
 - `Ctrl/Cmd+Alt+E` — exec on the current selection
+
+(`byteask.open`, the terminal command, has no default keybinding anymore — it's
+still reachable via the Command Palette as **ByteAsk: Open Terminal**.)
 
 ## Develop
 
@@ -41,9 +62,12 @@ npm run package      # build a .vsix (requires @vscode/vsce)
 ```
 
 Headless commands stream via `child_process` into the **ByteAsk** output channel;
-the interactive TUI runs in an integrated terminal (it needs a TTY). A future
-revision will speak the structured `byteask app-server` protocol for inline diffs
-and approvals.
+the interactive TUI runs in an integrated terminal (it needs a TTY). The chat panel
+is the newer path: `src/appServer/` is a small JSON-RPC client over
+`byteask app-server`'s stdio protocol; `src/appServer/generated/` is vendored,
+type-only TypeScript produced by `byteask app-server generate-ts --experimental`
+(regenerate it if the protocol changes — do not hand-edit those files). Both paths
+coexist; nothing about the terminal/exec path changed.
 
 ## License
 

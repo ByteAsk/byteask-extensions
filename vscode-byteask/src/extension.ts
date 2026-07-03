@@ -1,17 +1,21 @@
 // ByteAsk VS Code extension.
 //
-// Drives the `byteask` CLI:
+// Primary entry point: a graphical chat sidebar (ChatViewProvider) driven by
+// `byteask app-server`'s JSON-RPC protocol — inline streaming, diffs, and
+// approval cards, no terminal involved. See chatViewProvider.ts.
+//
+// Everything below this point is the original CLI-subcommand wrapper, kept
+// unchanged for the Command Palette / keybindings that still want it:
 //   • interactive / resume  → integrated terminal (needs a TTY)
 //   • exec / review / apply → child_process streamed into an OutputChannel
-//
-// This mirrors byteask.nvim. A future revision can graduate to the structured
-// `byteask app-server` protocol for inline diffs and approvals.
 
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
+import { ChatViewProvider } from './chatViewProvider';
 
 let terminal: vscode.Terminal | undefined;
 let output: vscode.OutputChannel | undefined;
+let chatViewProvider: ChatViewProvider | undefined;
 
 interface ByteAskConfig {
   command: string;
@@ -210,6 +214,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const reg = (id: string, fn: (...args: any[]) => any) =>
     context.subscriptions.push(vscode.commands.registerCommand(id, fn));
 
+  chatViewProvider = new ChatViewProvider(context.extensionUri, getOutput());
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatViewProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+  );
+  reg('byteask.chat.focus', () => chatViewProvider?.reveal());
+  reg('byteask.chat.newThread', () => chatViewProvider?.newThread());
+
   reg('byteask.open', () => openTerminal());
   reg('byteask.resumeLast', () => openTerminal(['resume', '--last']));
   reg('byteask.resume', () => openTerminal(['resume']));
@@ -231,4 +244,5 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {
   terminal?.dispose();
   output?.dispose();
+  chatViewProvider?.dispose();
 }

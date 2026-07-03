@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- ByteAsk mark for the Activity Bar: angle brackets (code) with a center
+       dot (the "ask"/focus point). Deliberately not a magnifying glass,
+       since that shape collides with VS Code/Cursor's own built-in Search
+       icon when both sit in the same toolbar. currentColor-only so it
+       themes automatically in light/dark, same convention as Claude Code's
+       spark icon. -->
+  <path d="M9 6 3.5 12 9 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M15 6 20.5 12 15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="12" cy="12" r="1.4" fill="currentColor"/>
+</svg>

@@ -1,0 +1,743 @@
+:root {
+  /* ByteAsk brand teal -- used deliberately instead of the generic
+     --vscode-focusBorder/--vscode-button-background (which default to
+     theme blue in most themes), the same way Claude Code uses its own
+     orange accent rather than the ambient theme color. */
+  --byteask-accent: #7aafa5;
+  --byteask-accent-hover: #6a9c92;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  color: var(--vscode-foreground);
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  position: relative;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  /* Extra bottom padding so scrolling to the latest message leaves visible
+     breathing room above the composer instead of pinning content flush
+     against it -- matches how Cursor's own chat auto-scroll leaves a gap. */
+  padding: 10px 12px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Reserves scroll room right after sending so the new message can actually
+   be scrolled to the top of the view -- without this, scrollTop has nowhere
+   to go, since the message is the last thing in the list (see chat.js
+   beginAnchor/updateAnchorSpacer). Shrinks to 0 as real content grows. */
+#scrollSpacer {
+  flex-shrink: 0;
+  flex-grow: 0;
+  width: 1px;
+}
+
+/* Plain assistant text -- no bubble/background, matches Claude Code's flat
+   response text rather than a boxed chat bubble. */
+.msg.assistant {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.msg.assistant.commentary {
+  opacity: 0.65;
+  font-size: 0.92em;
+}
+
+/* User turns stay as a right-aligned bubble -- this is the one place a
+   "bubble" reads correctly, since it needs to visually separate from the
+   agent's plain-text responses above/below it. */
+.msg.user {
+  align-self: flex-end;
+  max-width: 88%;
+  background: var(--vscode-input-background, rgba(127, 127, 127, 0.18));
+  border-radius: 14px;
+  padding: 6px 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.msg.error {
+  background: var(--vscode-inputValidation-errorBackground, #5a1d1d);
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #be1100);
+  color: var(--vscode-inputValidation-errorForeground, inherit);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.msg code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.2));
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.msg pre {
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.2));
+  padding: 6px 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.msg pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Tool-call style row: a small colored dot + bold label + one-line detail,
+   matching how Claude Code renders "Bash", "Edit", etc. steps. */
+.tool-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 0.92em;
+}
+
+.tool-row .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  background: var(--vscode-descriptionForeground, #888);
+}
+
+.tool-row.done .dot {
+  background: var(--vscode-charts-green, #4caf50);
+}
+
+.tool-row.declined .dot,
+.tool-row.failed .dot {
+  background: var(--vscode-charts-red, #e06c75);
+}
+
+.tool-row .body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-row .label {
+  font-weight: 600;
+}
+
+.tool-row .detail {
+  opacity: 0.75;
+  overflow-x: auto;
+  white-space: pre;
+  font-family: var(--vscode-editor-font-family, monospace);
+  margin-top: 2px;
+}
+
+details.reasoning {
+  opacity: 0.7;
+  font-size: 0.9em;
+}
+details.reasoning summary {
+  cursor: pointer;
+}
+details.reasoning .content {
+  white-space: pre-wrap;
+  padding: 4px 0 0 12px;
+}
+
+.approval-card {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.4));
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.approval-card .title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.approval-card .body-text {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+.approval-card .actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* Multi-choice question card (item/tool/requestUserInput) -- Claude Code's
+   "AskUserQuestion" tool, mirrored. */
+.user-input-card {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.4));
+  border-radius: 8px;
+  padding: 10px 12px 8px;
+  background: var(--vscode-editorWidget-background, rgba(127, 127, 127, 0.06));
+}
+
+.user-input-card.answered {
+  opacity: 0.6;
+}
+
+.user-input-card .ui-question-block + .ui-question-block {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.25));
+}
+
+.user-input-card .ui-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.user-input-card .ui-title {
+  font-weight: 600;
+}
+
+.user-input-card .ui-close {
+  width: 20px;
+  height: 20px;
+  line-height: 1;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.user-input-card .ui-prompt {
+  margin-top: 4px;
+  opacity: 0.9;
+  white-space: pre-wrap;
+}
+
+.user-input-card .ui-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.user-input-card .ui-option {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.user-input-card .ui-option:hover {
+  border-color: var(--byteask-accent);
+  background: rgba(122, 175, 165, 0.08);
+}
+
+.user-input-card .ui-option.selected {
+  border-color: var(--byteask-accent);
+  background: rgba(122, 175, 165, 0.14);
+}
+
+.user-input-card .ui-option-label {
+  font-weight: 500;
+}
+
+.user-input-card .ui-option-desc {
+  margin-top: 2px;
+  font-size: 0.9em;
+  opacity: 0.75;
+}
+
+.user-input-card .ui-other-input {
+  margin-top: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font: inherit;
+}
+
+.user-input-card .ui-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.user-input-card .ui-submit-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  margin-right: 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.25);
+  font-size: 0.75em;
+}
+
+.user-input-card .ui-hint {
+  font-size: 0.85em;
+  opacity: 0.6;
+}
+
+button {
+  background: var(--byteask-accent);
+  color: #0b1f1c;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: var(--vscode-font-size);
+}
+
+button:hover {
+  background: var(--byteask-accent-hover);
+}
+
+button.secondary {
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+}
+
+button.secondary:hover {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(127, 127, 127, 0.2));
+}
+
+button.link {
+  background: none;
+  color: var(--vscode-textLink-foreground);
+  padding: 0;
+  text-decoration: underline;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--vscode-icon-foreground, var(--vscode-foreground));
+}
+
+.icon-btn:hover {
+  background: var(--vscode-toolbar-hoverBackground, rgba(127, 127, 127, 0.2));
+}
+
+.icon-btn.primary {
+  background: var(--byteask-accent);
+  color: #0b1f1c;
+}
+
+.icon-btn.primary:hover {
+  background: var(--byteask-accent-hover);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.icon-btn:disabled:hover {
+  background: transparent;
+}
+
+/* Session header: title on the left, history/new-chat icons on the right --
+   mirrors Claude Code's own conversation-title row, sitting below VS Code's
+   native "ByteAsk" view title rather than duplicating it. */
+#sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.25));
+  flex-shrink: 0;
+  position: relative;
+}
+
+#sessionTitle {
+  font-size: 0.92em;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+.header-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+#historyPanel {
+  position: absolute;
+  top: 39px;
+  left: 6px;
+  right: 6px;
+  z-index: 10;
+  background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border, rgba(127, 127, 127, 0.4)));
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#historySearch {
+  margin: 8px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+#historySearch:focus {
+  outline: 1px solid var(--byteask-accent);
+  outline-offset: -1px;
+}
+
+#historyList {
+  overflow-y: auto;
+  padding: 0 6px 6px;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.history-item:hover {
+  background: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+.history-item .history-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92em;
+}
+
+.history-item .history-time {
+  flex-shrink: 0;
+  font-size: 0.82em;
+  opacity: 0.6;
+}
+
+.history-empty {
+  padding: 12px;
+  text-align: center;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+/* Composer: a single bordered card (textarea + toolbar stacked inside),
+   matching Claude Code's boxed composer instead of a bare inline textarea
+   plus loose buttons. The boundary is deliberately crisp and visible at
+   rest -- a full brand-colored ring plus a soft glow, not a faint 1px line
+   you only notice on focus -- mirroring Claude's own always-visible
+   composer outline. */
+#composerBox {
+  margin: 8px;
+  border: 1.5px solid var(--byteask-accent);
+  border-radius: 12px;
+  background: var(--vscode-input-background);
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(122, 175, 165, 0.18), 0 2px 10px rgba(122, 175, 165, 0.12);
+  transition:
+    border-color 0.12s ease-in-out,
+    box-shadow 0.12s ease-in-out;
+}
+
+#composerBox:focus-within {
+  border-color: var(--byteask-accent-hover);
+  box-shadow: 0 0 0 2px rgba(122, 175, 165, 0.3), 0 2px 14px rgba(122, 175, 165, 0.22);
+}
+
+#input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  background: transparent;
+  color: var(--vscode-input-foreground);
+  border: none;
+  padding: 9px 10px 4px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+#input:focus {
+  outline: none;
+}
+
+#composerToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px 8px;
+}
+
+.composerToolbarLeft,
+.composerToolbarRight {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* "+" and "/" menus: small popups anchored directly above the button that
+   opened them (via `position:relative` on .menu-wrap + `position:absolute;
+   bottom:100%` here) -- NOT vscode.window.showQuickPick, which would render
+   as a top-of-window overlay disconnected from where the user clicked. */
+.menu-wrap {
+  position: relative;
+}
+
+.popup-menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  background: var(--vscode-dropdown-background, var(--vscode-editor-background));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-panel-border, rgba(127, 127, 127, 0.4)));
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  min-width: 200px;
+  padding: 4px;
+}
+
+.popup-menu.wide {
+  width: 260px;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.92em;
+  white-space: nowrap;
+}
+
+.popup-item:hover {
+  background: var(--vscode-list-hoverBackground, rgba(127, 127, 127, 0.15));
+}
+
+.popup-item-icon {
+  width: 14px;
+  text-align: center;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.popup-section-label {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.55;
+  padding: 6px 8px 2px;
+}
+
+#slashSearch {
+  margin: 2px 2px 4px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+#slashSearch:focus {
+  outline: 1px solid var(--byteask-accent);
+  outline-offset: -1px;
+}
+
+#slashList {
+  overflow-y: auto;
+}
+
+/* Neutral system/info messages -- "/status", "/usage", model-switch
+   confirmations, etc. -- distinct from both chat bubbles and error bubbles. */
+.msg.system {
+  border: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.88em;
+  white-space: pre-wrap;
+  opacity: 0.9;
+}
+
+/* Attachment chips (images picked via "Upload from computer"), shown above
+   the composer until sent or removed. */
+#attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+#attachments:empty {
+  display: none;
+}
+
+.attachment-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--vscode-badge-background, rgba(127, 127, 127, 0.25));
+  color: var(--vscode-badge-foreground, var(--vscode-foreground));
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 0.85em;
+  max-width: 220px;
+}
+
+.attachment-chip .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-chip .remove {
+  cursor: pointer;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.attachment-chip .remove:hover {
+  opacity: 1;
+}
+
+/* "Thinking" indicator -- shown between sending a message and the first
+   real activity (item/turn event) arriving, so the panel never looks dead
+   during the (often several-second) gap while the model is working. */
+#thinking {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 12px 8px;
+  font-size: 0.92em;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+.thinking-mark {
+  color: var(--byteask-accent);
+  animation: thinking-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--vscode-descriptionForeground, #999) 40%,
+    var(--vscode-foreground, #fff) 50%,
+    var(--vscode-descriptionForeground, #999) 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-move 1.8s linear infinite;
+}
+
+@keyframes shimmer-move {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thinking-mark,
+  .shimmer {
+    animation: none;
+  }
+}
+
+/* The greeting is the first thing anyone sees -- it should read as a title,
+   not a caption. Sized and weighted deliberately larger than the rest of
+   the UI, and placed slightly above dead-center (like a hero), rather than
+   blending into body text size. */
+#welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px 8vh;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+#welcome .logo {
+  color: var(--byteask-accent);
+  width: 44px;
+  height: 44px;
+  margin-bottom: 6px;
+}
+
+#welcome .wordmark {
+  font-size: 1.7em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vscode-foreground);
+}
+
+#welcome .tagline {
+  font-size: 0.95em;
+  line-height: 1.5;
+  max-width: 34ch;
+  opacity: 0.85;
+}
+
+.hidden {
+  display: none !important;
+}
