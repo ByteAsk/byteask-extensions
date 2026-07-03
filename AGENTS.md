@@ -9,8 +9,8 @@ commands and just need the exact facts.
 
 Monorepo for ByteAsk editor connectors that don't need to live at their own
 repo root — currently `vscode-byteask/` (VS Code / Cursor / Windsurf /
-VSCodium), `jetbrains/` (CLion / IntelliJ IDEA), and `zed/` (Zed), with
-`emacs/` planned as a sibling. The Neovim connector lives in the separate
+VSCodium), `jetbrains/` (CLion / IntelliJ IDEA), `zed/` (Zed), and `emacs/`
+(Emacs). The Neovim connector lives in the separate
 repo `ByteAsk/ByteAsk.nvim` because Neovim plugin managers require plugin
 code at repo root — see that repo's own `AGENTS.md` for why. All drive the
 same `byteask` CLI.
@@ -273,3 +273,39 @@ the PR. `scripts/release.sh zed --yes` still works for tagging a version
 checkpoint in this repo (useful for tracking which commit was submitted),
 it just doesn't trigger any automated publish the way the other connectors'
 tags do.
+
+## Emacs package (`emacs/`) — build, test, release
+
+Single-file package, `emacs/byteask.el`. No MELPA submission yet -- install
+directly from this repo (see `emacs/README.md`'s "Install" section for the
+`use-package :vc` / `package-vc-install` incantations).
+
+```bash
+cd emacs
+emacs --batch -Q --eval "(setq byte-compile-error-on-warn t)" -f batch-byte-compile byteask.el
+emacs --batch -Q --eval "(require 'checkdoc) (checkdoc-file \"byteask.el\")"
+```
+
+Both must be clean before this is MELPA-submission-ready (byte-compile:
+zero warnings, not just zero errors; checkdoc: no output at all). A real
+gotcha hit while building this: byte-compiling with `eat`/`vterm` (soft,
+optional dependencies) NOT installed will warn that a `let`-binding of
+`vterm-shell` is an unused lexical variable -- the byte-compiler has no way
+to know it's meant to be a dynamically-scoped special variable from an
+uninstalled package. Fixed with a local `(defvar vterm-shell)` declaration
+(the standard idiom for this exact situation); don't remove it just because
+`eat`/`vterm` happen to be installed on whatever machine you're compiling on.
+
+Ships Tier 1 (`byteask` -- terminal session via `eat`/`vterm`/built-in
+`ansi-term`) and Tier 2 (`byteask-exec`, `byteask-exec-region`,
+`byteask-review`, `byteask-apply`, `byteask-resume[-last]`,
+`byteask-fix-diagnostics` via Emacs's built-in Flymake). Tier 3 (a rich
+streaming buffer + ediff-based approval, matching the JCEF/webview chat in
+the other connectors) is a documented next goal, not yet built -- see
+`emacs/README.md`'s "Known open items" for the precedent packages
+(`gptel`, `claude-code-ide.el`) to build from.
+
+Release: `scripts/release.sh emacs --yes` tags `emacs-vX.Y.Z` -- there is no
+`emacs-publish.yml` (no automated channel exists to push to; MELPA
+submission is a manual PR to `melpa/melpa` adding a recipe file, a separate,
+future step). The tag is a version checkpoint for this repo, same as Zed's.

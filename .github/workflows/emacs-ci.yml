@@ -1,0 +1,49 @@
+name: Emacs CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['emacs/**', '.github/workflows/emacs-ci.yml']
+  pull_request:
+    paths: ['emacs/**', '.github/workflows/emacs-ci.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: emacs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: jcs090218/setup-emacs@master
+        with:
+          version: 30.1
+
+      - name: Byte-compile (zero warnings)
+        run: |
+          emacs --batch -Q \
+            --eval "(setq byte-compile-error-on-warn t)" \
+            -f batch-byte-compile byteask.el
+
+      - name: checkdoc
+        run: |
+          emacs --batch -Q \
+            --eval "(require 'checkdoc)" \
+            --eval "(setq checkdoc-diagnostic-buffer \"*checkdoc*\")" \
+            --eval "(checkdoc-file \"byteask.el\")" \
+            --eval "(with-current-buffer (get-buffer-create \"*Warnings*\") (when (> (buffer-size) 0) (error \"checkdoc reported issues\")))"
+
+      - name: Load test -- every command actually registers
+        run: |
+          cat > /tmp/loadtest.el <<'ELISP'
+          (add-to-list 'load-path default-directory)
+          (require 'byteask)
+          (dolist (cmd '(byteask byteask-resume byteask-resume-last byteask-exec
+                         byteask-exec-region byteask-review byteask-apply
+                         byteask-fix-diagnostics))
+            (unless (commandp cmd)
+              (error "%s is not registered as an interactive command" cmd)))
+          (princ "ALL_COMMANDS_OK\n")
+          ELISP
+          emacs --batch -Q -L . -l /tmp/loadtest.el
