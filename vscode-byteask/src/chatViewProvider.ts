@@ -151,6 +151,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     return this.client;
   }
 
+  /**
+   * Every call site that talks to `byteask app-server` funnels its failure
+   * through here so "the CLI isn't installed" or "nobody's logged in"
+   * always gets the same dedicated onboarding card in the webview --
+   * regardless of whether the user triggered it by sending a message,
+   * opening history, switching models, etc. -- instead of 7 different raw
+   * error strings depending on which action happened to be first.
+   */
+  private reportUnreachable(err: unknown, context: string): void {
+    if (AppServerClient.isCliNotFoundError(err)) {
+      this.post({ type: 'cliNotFound' });
+      return;
+    }
+    if (AppServerClient.isNotLoggedInError(err)) {
+      this.post({ type: 'notLoggedIn' });
+      return;
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    this.post({ type: 'error', message: `${context}: ${message}` });
+  }
+
   private forwardItem(kind: 'itemStarted' | 'itemCompleted', item: ThreadItem): void {
     if (item.type === 'fileChange') {
       this.output.appendLine(`[chat] ${kind} fileChange id=${item.id} status=${item.status}`);
@@ -299,6 +320,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       case 'logout':
         this.openAuthTerminal('logout');
         break;
+      case 'installCli':
+        this.installCli();
+        break;
+      case 'retryConnect':
+        await this.retryConnect();
+        break;
       default:
         break;
     }
@@ -384,8 +411,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.pinnedModel = pick.model;
       this.post({ type: 'systemMessage', text: `Model set to ${pick.label} for new messages.` });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Could not list models: ${message}` });
+      this.reportUnreachable(err, 'Could not list models');
     }
   }
 
@@ -464,8 +490,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       this.post({ type: 'systemMessage', text: lines.join('\n') || 'No usage data available.' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Could not read usage: ${message}` });
+      this.reportUnreachable(err, 'Could not read usage');
     }
   }
 
@@ -510,8 +535,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }
       this.post({ type: 'insertText', text: pick.skill.interface?.defaultPrompt ?? `Use the ${pick.skill.name} skill.` });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Could not list skills: ${message}` });
+      this.reportUnreachable(err, 'Could not list skills');
     }
   }
 
@@ -527,6 +551,44 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const term = vscode.window.createTerminal({ name: 'ByteAsk', cwd: this.workspaceCwd() });
     term.show();
     term.sendText(action ? `${command} ${action}` : command);
+  }
+
+  /**
+   * One-click install for the "ByteAsk CLI not found" onboarding card. Runs
+   * in a visible integrated terminal (not silently in the background) so
+   * the user can watch it, approve/deny prompts it shows, and Ctrl+C it --
+   * same trust model as any curl-pipe-to-shell installer, and this is
+   * literally the same script https://code.byteask.ai/install.sh runs, which
+   * is also what the CLI's own npm package (@byteask/cli) falls back to on
+   * an unrecognized platform. Chosen over `npm install -g @byteask/cli` or
+   * `pip install byteask` as the DEFAULT action (both remain available as
+   * copyable manual options in the card) because this extension's own
+   * audience is C/C++ developers, who are far less likely to already have
+   * Node or Python toolchains installed than a JS/Python dev would -- the
+   * platform's native shell is the only dependency guaranteed to exist.
+   */
+  private installCli(): void {
+    const term = vscode.window.createTerminal({ name: 'Install ByteAsk' });
+    term.show();
+    if (process.platform === 'win32') {
+      term.sendText('powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (irm https://code.byteask.ai/install.ps1)"');
+    } else {
+      term.sendText('curl -fsSL https://code.byteask.ai/install.sh | sh');
+    }
+  }
+
+  /** "I already installed it" button on the onboarding card: drop the
+   * cached (nonexistent) client and try again, exactly like the very first
+   * connection attempt would. */
+  private async retryConnect(): Promise<void> {
+    this.client = undefined;
+    try {
+      await this.ensureClient();
+      this.post({ type: 'connected' });
+      await this.autoResumeLatest();
+    } catch (err) {
+      this.reportUnreachable(err, 'Still could not reach byteask');
+    }
   }
 
   /**
@@ -587,8 +649,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       }));
       this.post({ type: 'sessionList', sessions });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Failed to list sessions: ${message}` });
+      this.reportUnreachable(err, 'Failed to list sessions');
     }
   }
 
@@ -613,9 +674,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         await this.resumeThreadById(latest.id);
       }
     } catch (err) {
-      this.output.appendLine(
-        `[chat] auto-resume skipped: ${err instanceof Error ? err.message : String(err)}`
-      );
+      // Silent for everything EXCEPT "the CLI isn't installed" / "nobody's
+      // logged in" -- a resume failure at startup for other reasons (no
+      // history yet, a transient hiccup) shouldn't greet a user who hasn't
+      // done anything yet with an error card, but these two ARE exactly the
+      // moment a first-time (or logged-out) user needs to see the
+      // corresponding onboarding card, not a quietly-logged line they'd
+      // never notice until they typed a message and got confused.
+      if (AppServerClient.isCliNotFoundError(err)) {
+        this.post({ type: 'cliNotFound' });
+      } else if (AppServerClient.isNotLoggedInError(err)) {
+        this.post({ type: 'notLoggedIn' });
+      } else {
+        this.output.appendLine(`[chat] auto-resume skipped: ${err instanceof Error ? err.message : String(err)}`);
+      }
     }
   }
 
@@ -633,8 +705,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.threadId = res.thread.id;
       this.replayTranscript(res.thread.turns);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Failed to resume session: ${message}` });
+      this.reportUnreachable(err, 'Failed to resume session');
     }
   }
 
@@ -698,8 +769,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         approvalPolicy: 'on-request',
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      this.post({ type: 'error', message: `Failed to reach byteask: ${message}` });
+      this.reportUnreachable(err, 'Failed to reach byteask');
     }
   }
 

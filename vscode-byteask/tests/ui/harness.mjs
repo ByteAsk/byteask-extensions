@@ -37,6 +37,22 @@ export function buildHarnessHtml() {
           setState: (s) => { state = s; },
         };
       };
+      // page.setContent() pages have an opaque origin, which Chromium
+      // refuses navigator.clipboard on entirely (not a permissions issue --
+      // it's flat-out undefined) even with clipboard-read/write granted.
+      // The real VS Code webview runs on a proper vscode-webview:// origin
+      // where navigator.clipboard genuinely works, so this stub exists
+      // purely so click-to-copy code is exercisable/assertable in this
+      // harness, recording writes into window.__clipboard.
+      if (!navigator.clipboard) {
+        window.__clipboard = '';
+        Object.defineProperty(navigator, 'clipboard', {
+          value: {
+            writeText: (text) => { window.__clipboard = text; return Promise.resolve(); },
+            readText: () => Promise.resolve(window.__clipboard),
+          },
+        });
+      }
       // The webview is normally sized by VS Code's panel; give it a fixed,
       // realistic sidebar-ish size so layout math (offsetTop, clientHeight)
       // is deterministic across test runs/environments.

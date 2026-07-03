@@ -71,8 +71,39 @@ export class AppServerClient {
         requestAttestation: false,
       },
     };
-    await rpc.request<InitializeResponse>('initialize', initParams);
+    // A bounded wait, not just relying on request()'s own rejection: if the
+    // binary exists but is corrupt/hangs (rather than a clean ENOENT), the
+    // request would otherwise never resolve OR reject, leaving the chat view
+    // stuck showing "thinking" forever with no way out.
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Timed out waiting for byteask app-server to respond to initialize.')), 10_000)
+    );
+    try {
+      await Promise.race([rpc.request<InitializeResponse>('initialize', initParams), timeout]);
+    } catch (err) {
+      rpc.dispose(); // don't leak a hung/zombie process on a failed handshake
+      throw err;
+    }
     return client;
+  }
+
+  /** True if `err` is Node's spawn failure for "the byteask binary doesn't
+   * exist / isn't on PATH" -- as opposed to a crash, a bad response, or a
+   * timeout, all of which need a different message than "please install
+   * ByteAsk". */
+  static isCliNotFoundError(err: unknown): boolean {
+    return err instanceof Error && (err as NodeJS.ErrnoException).code === 'ENOENT';
+  }
+
+  /** True if `err` is `byteask app-server` refusing to even start because
+   * nobody's logged in -- verified live: with no stored credentials, the
+   * binary prints "You're not signed in to ByteAsk. Run: byteask login
+   * ..." to stderr and exits immediately (code 1) before any JSON-RPC
+   * handshake happens at all. A distinct failure mode from "not installed"
+   * (the binary runs fine) and from a generic crash (this one is
+   * consistent, expected, and has one specific fix: log in). */
+  static isNotLoggedInError(err: unknown): boolean {
+    return err instanceof Error && /not signed in|byteask login/i.test(err.message);
   }
 
   private wireCallbacks(cb: AppServerCallbacks): void {

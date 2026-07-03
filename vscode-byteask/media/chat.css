@@ -741,3 +741,104 @@ button.link {
 .hidden {
   display: none !important;
 }
+
+/* "ByteAsk CLI not found" onboarding card -- takes over the same slot as
+   #welcome (mutually exclusive, both centered where #messages would sit)
+   since there's nothing useful to show in the message list until the CLI
+   itself is reachable. */
+#onboarding {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 0 24px 8vh;
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+}
+
+#onboarding .logo {
+  color: var(--byteask-accent);
+  margin-bottom: 4px;
+}
+
+#onboarding .ob-title {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: var(--vscode-foreground);
+}
+
+#onboarding .ob-body {
+  font-size: 0.95em;
+  line-height: 1.5;
+  max-width: 38ch;
+  opacity: 0.85;
+}
+
+#onboarding .ob-body code {
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+#onboarding .ob-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#onboarding #obRetryBtn {
+  font-size: 0.9em;
+}
+
+#onboarding details#obManual {
+  margin-top: 14px;
+  font-size: 0.9em;
+  max-width: 38ch;
+  width: 100%;
+}
+
+#onboarding details#obManual summary {
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+#onboarding details#obManual summary:hover {
+  opacity: 1;
+}
+
+.ob-manual-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.ob-manual-label {
+  opacity: 0.6;
+  font-size: 0.85em;
+  flex-shrink: 0;
+  width: 3em;
+}
+
+.ob-manual-cmd {
+  flex: 1;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.85em;
+  background: var(--vscode-textCodeBlock-background, rgba(127, 127, 127, 0.15));
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.ob-manual-cmd:hover {
+  outline: 1px solid var(--byteask-accent);
+}
+
+.ob-manual-cmd.copied {
+  outline: 1px solid var(--byteask-accent);
+  color: var(--byteask-accent);
+}

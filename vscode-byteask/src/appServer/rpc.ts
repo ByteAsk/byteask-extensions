@@ -51,9 +51,46 @@ export class AppServerRpc {
   private serverRequestHandlers = new Map<string, ServerRequestHandler>();
   private onErrorLine?: (line: string) => void;
   private disposed = false;
+  /**
+   * Set the moment the child process itself fails to even start (most
+   * commonly ENOENT -- the `byteask` binary isn't installed / not on PATH).
+   * Node's `ChildProcess` is an EventEmitter, and an 'error' event with no
+   * listener is a Node built-in special case that gets RE-THROWN as an
+   * uncaught exception instead of silently dropped -- verified live: this
+   * previously crashed the extension host outright the first time anyone
+   * opened the chat view without the CLI installed, rather than showing any
+   * error UI at all. Both a same-tick check (spawnError already set when
+   * request() runs) and this event handler (fires after request() already
+   * registered a pending promise) are needed since the ordering between
+   * "spawn's async error event" and "the caller's first request() call" is
+   * not guaranteed.
+   */
+  private spawnError?: Error;
+  /**
+   * Every stderr line, always recorded -- not just forwarded to whatever
+   * `setStderrHandler` callback is attached. That callback is only wired up
+   * by `AppServerClient.connect()` AFTER construction, but a process that
+   * fails a startup precondition (e.g. `byteask app-server` refuses to even
+   * start and exits immediately when nobody's logged in, printing "You're
+   * not signed in to ByteAsk. Run: byteask login ...") can emit its one and
+   * only useful stderr line and exit within milliseconds -- before any
+   * external handler exists to catch it. Buffering here means the 'exit'
+   * handler below can still surface that real message instead of a generic
+   * "byteask app-server exited".
+   */
+  private stderrBuffer: string[] = [];
 
   constructor(command: string, args: string[], cwd: string) {
     this.proc = spawn(command, args, { cwd });
+
+    this.proc.on('error', (err) => {
+      this.spawnError = err;
+      this.disposed = true;
+      for (const { reject } of this.pending.values()) {
+        reject(err);
+      }
+      this.pending.clear();
+    });
 
     const rl = readline.createInterface({ input: this.proc.stdout });
     rl.on('line', (line) => this.handleLine(line));
@@ -62,15 +99,20 @@ export class AppServerRpc {
     this.proc.stderr.on('data', (chunk: string) => {
       for (const line of chunk.split('\n')) {
         if (line.trim() !== '') {
+          this.stderrBuffer.push(line);
           this.onErrorLine?.(line);
         }
       }
     });
 
-    this.proc.on('exit', () => {
+    this.proc.on('exit', (code) => {
       this.disposed = true;
+      const detail = this.stderrBuffer.slice(-5).join(' ');
+      const message = detail
+        ? `byteask app-server exited (code ${code}): ${detail}`
+        : `byteask app-server exited (code ${code})`;
       for (const { reject } of this.pending.values()) {
-        reject(new Error('byteask app-server exited'));
+        reject(new Error(message));
       }
       this.pending.clear();
     });
@@ -144,7 +186,10 @@ export class AppServerRpc {
   /** Send a client->server request and await its response. */
   request<T = unknown>(method: string, params: unknown): Promise<T> {
     if (this.disposed) {
-      return Promise.reject(new Error('byteask app-server is not running'));
+      const detail = this.stderrBuffer.slice(-5).join(' ');
+      return Promise.reject(
+        this.spawnError ?? new Error(detail ? `byteask app-server is not running: ${detail}` : 'byteask app-server is not running')
+      );
     }
     const id = this.nextId++;
     return new Promise<T>((resolve, reject) => {

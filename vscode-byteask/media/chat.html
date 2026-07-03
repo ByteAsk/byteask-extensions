@@ -36,6 +36,43 @@
       <div class="wordmark">ByteAsk</div>
       <div class="tagline">Ask about this repo, request a change, or paste an error — ByteAsk reads the code and proposes a diff you approve.</div>
     </div>
+
+    <div id="onboarding" class="hidden">
+      <svg class="logo" width="40" height="40" viewBox="0 0 24 24" fill="none">
+        <path d="M9 6 3.5 12 9 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 6 20.5 12 15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor"/>
+      </svg>
+      <div id="obTitle" class="ob-title">ByteAsk CLI not found</div>
+      <div id="obBody" class="ob-body">This extension drives the <code>byteask</code> command-line tool. Install it, then retry.</div>
+      <div class="ob-actions">
+        <button id="obPrimaryBtn">Install ByteAsk</button>
+        <button id="obRetryBtn" class="secondary">I've installed it — Retry</button>
+      </div>
+      <details id="obManual">
+        <summary id="obManualSummary">Other ways to install</summary>
+        <div id="obManualInstall">
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">curl</div>
+            <code class="ob-manual-cmd" data-copy="curl -fsSL https://code.byteask.ai/install.sh | sh">curl -fsSL https://code.byteask.ai/install.sh | sh</code>
+          </div>
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">npm</div>
+            <code class="ob-manual-cmd" data-copy="npm install -g @byteask/cli">npm install -g @byteask/cli</code>
+          </div>
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">pip</div>
+            <code class="ob-manual-cmd" data-copy="pip install byteask">pip install byteask</code>
+          </div>
+        </div>
+        <div id="obManualLogin" class="hidden">
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">CLI</div>
+            <code class="ob-manual-cmd" data-copy="byteask login --email you@company.com">byteask login --email you@company.com</code>
+          </div>
+        </div>
+      </details>
+    </div>
     <div id="messages"></div>
 
     <div id="thinking" class="hidden">

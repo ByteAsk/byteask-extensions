@@ -10,6 +10,14 @@
   const vscode = acquireVsCodeApi();
 
   const welcomeEl = document.getElementById('welcome');
+  const onboardingEl = document.getElementById('onboarding');
+  const obTitleEl = document.getElementById('obTitle');
+  const obBodyEl = document.getElementById('obBody');
+  const obPrimaryBtn = document.getElementById('obPrimaryBtn');
+  const obRetryBtn = document.getElementById('obRetryBtn');
+  const obManualSummary = document.getElementById('obManualSummary');
+  const obManualInstall = document.getElementById('obManualInstall');
+  const obManualLogin = document.getElementById('obManualLogin');
   const messagesEl = document.getElementById('messages');
   const inputEl = document.getElementById('input');
   const sendBtn = document.getElementById('sendBtn');
@@ -616,6 +624,53 @@
   function setWelcomeVisible(visible) {
     welcomeEl.classList.toggle('hidden', !visible);
     messagesEl.classList.toggle('hidden', visible);
+    if (visible) {
+      onboardingEl.classList.add('hidden');
+    }
+  }
+
+  const ONBOARDING_CONTENT = {
+    cliNotFound: {
+      title: 'ByteAsk CLI not found',
+      body: 'This extension drives the <code>byteask</code> command-line tool. Install it, then retry.',
+      primaryLabel: 'Install ByteAsk',
+      primaryMessage: 'installCli',
+      manualSummary: 'Other ways to install',
+    },
+    notLoggedIn: {
+      title: 'Not signed in to ByteAsk',
+      body: "<code>byteask</code> is installed, but you're not signed in yet. Sign in, then retry.",
+      primaryLabel: 'Log in',
+      primaryMessage: 'login',
+      manualSummary: 'Or run this in a terminal',
+    },
+  };
+
+  /** Which onboarding variant is showing, if any -- read by the primary
+   * button's click handler to decide whether to post 'installCli' or
+   * 'login', since both variants share the same card/button DOM. */
+  let onboardingMode = null;
+
+  /** The onboarding card (CLI missing, or not logged in) takes over the
+   * same slot as #welcome -- there's nothing useful to show in #messages
+   * until the CLI is actually reachable and authenticated. */
+  function setOnboardingVisible(visible, mode) {
+    onboardingEl.classList.toggle('hidden', !visible);
+    if (visible) {
+      onboardingMode = mode;
+      const content = ONBOARDING_CONTENT[mode];
+      obTitleEl.textContent = content.title;
+      obBodyEl.innerHTML = content.body;
+      obPrimaryBtn.textContent = content.primaryLabel;
+      obManualSummary.textContent = content.manualSummary;
+      obManualInstall.classList.toggle('hidden', mode !== 'cliNotFound');
+      obManualLogin.classList.toggle('hidden', mode !== 'notLoggedIn');
+      welcomeEl.classList.add('hidden');
+      messagesEl.classList.add('hidden');
+    } else {
+      onboardingMode = null;
+      setWelcomeVisible(true);
+    }
   }
 
   function clearThread() {
@@ -742,6 +797,17 @@
         setWelcomeVisible(false);
         addErrorMessage(msg.message);
         break;
+      case 'cliNotFound':
+        stopThinking();
+        setOnboardingVisible(true, 'cliNotFound');
+        break;
+      case 'notLoggedIn':
+        stopThinking();
+        setOnboardingVisible(true, 'notLoggedIn');
+        break;
+      case 'connected':
+        setOnboardingVisible(false);
+        break;
       case 'systemMessage':
         setWelcomeVisible(false);
         addSystemMessage(msg.text);
@@ -836,6 +902,23 @@
   historyBtn.addEventListener('click', toggleHistoryPanel);
   newChatBtn.addEventListener('click', () => vscode.postMessage({ type: 'newThread' }));
   historySearch.addEventListener('input', () => renderHistoryList(historySearch.value));
+
+  obPrimaryBtn.addEventListener('click', () => {
+    const content = ONBOARDING_CONTENT[onboardingMode];
+    if (content) {
+      vscode.postMessage({ type: content.primaryMessage });
+    }
+  });
+  obRetryBtn.addEventListener('click', () => vscode.postMessage({ type: 'retryConnect' }));
+  onboardingEl.querySelectorAll('.ob-manual-cmd').forEach((el) => {
+    el.addEventListener('click', () => {
+      const text = el.getAttribute('data-copy') || el.textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        el.classList.add('copied');
+        setTimeout(() => el.classList.remove('copied'), 1200);
+      });
+    });
+  });
 
   // File links in assistant messages (e.g. "Edited [hello.txt](/abs/path)")
   // are plain <a href> tags from the hand-rolled markdown renderer -- a
