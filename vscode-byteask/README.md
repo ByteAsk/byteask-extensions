@@ -2,6 +2,13 @@
 
 Drive the **[ByteAsk](https://byteask.ai)** C/C++ agentic coding harness from VS Code.
 
+> ### 💬 Join the community
+> **[discord.gg/vx5Eu4YNzG](https://discord.gg/vx5Eu4YNzG)** — community support, direct
+> access to the team, and the fastest way to report an issue or ask a question.
+> Direct email: **anirudha@byteask.ai**.
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/vx5Eu4YNzG)
+
 ## Chat (primary)
 
 The **ByteAsk** icon in the Activity Bar opens a graphical chat panel — the intended

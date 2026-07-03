@@ -901,6 +901,14 @@
 
   historyBtn.addEventListener('click', toggleHistoryPanel);
   newChatBtn.addEventListener('click', () => vscode.postMessage({ type: 'newThread' }));
+
+  const discordLink = document.getElementById('discordLink');
+  if (discordLink) {
+    discordLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      vscode.postMessage({ type: 'openExternal', url: 'https://discord.gg/vx5Eu4YNzG' });
+    });
+  }
   historySearch.addEventListener('input', () => renderHistoryList(historySearch.value));
 
   obPrimaryBtn.addEventListener('click', () => {

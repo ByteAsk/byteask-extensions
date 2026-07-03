@@ -279,6 +279,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       case 'openFile':
         await this.openFile(String(msg.path ?? ''));
         break;
+      case 'openExternal': {
+        // Allowlisted, not an arbitrary-URL open -- this only ever fires
+        // from the one hardcoded Discord link in chat.html/chat.js.
+        const url = String(msg.url ?? '');
+        if (/^https:\/\/discord\.gg\//.test(url)) {
+          await vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+        break;
+      }
       case 'interrupt':
         if (this.client && this.threadId && this.currentTurnId && this.turnInProgress) {
           await this.client.turnInterrupt({ threadId: this.threadId, turnId: this.currentTurnId });

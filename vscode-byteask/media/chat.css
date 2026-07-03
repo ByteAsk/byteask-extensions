@@ -738,6 +738,21 @@ button.link {
   opacity: 0.85;
 }
 
+#welcome .community-link {
+  margin-top: 4px;
+  font-size: 0.85em;
+  opacity: 0.7;
+}
+
+#welcome .community-link a {
+  color: var(--byteask-accent);
+  text-decoration: none;
+}
+
+#welcome .community-link a:hover {
+  text-decoration: underline;
+}
+
 .hidden {
   display: none !important;
 }

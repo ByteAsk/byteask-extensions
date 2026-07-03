@@ -7,6 +7,13 @@ debugger as first-class agent tools).
 Each connector drives the same `byteask` CLI, so behavior stays consistent across
 editors and every connector inherits new engine capabilities for free.
 
+> ### 💬 Join the community
+> **[discord.gg/vx5Eu4YNzG](https://discord.gg/vx5Eu4YNzG)** — community support, direct
+> access to the team, and the fastest way to report an issue. You can also reach us
+> directly at **anirudha@byteask.ai**.
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/vx5Eu4YNzG)
+
 ## Connectors
 
 | Editor | Package | Status |
@@ -15,7 +22,7 @@ editors and every connector inherits new engine capabilities for free.
 | VS Code | [`vscode-byteask`](./vscode-byteask) | ✅ ready |
 | Zed | `zed-byteask` | 🛠 planned |
 | Emacs | `byteask.el` | 🛠 planned |
-| JetBrains (CLion/IDEA) | `byteask-jetbrains` | 🛠 planned |
+| JetBrains (CLion/IDEA) | [`jetbrains`](./jetbrains) | 🚧 built, pending manual `runIde` verification |
 | Helix / Sublime | — | 🛠 planned |
 
 ## The integration surface
