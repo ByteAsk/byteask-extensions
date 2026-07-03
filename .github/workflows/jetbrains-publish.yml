@@ -47,7 +47,14 @@ jobs:
         run: ./gradlew publishPlugin
 
       - name: Attach zip to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        # always() so a Marketplace publish failure (e.g. "version already
+        # exists", a transient network error) doesn't also skip this step --
+        # verified live: without always(), a failed publishPlugin step (this
+        # exact one, on jetbrains-v0.1.0 -- the version already existed from
+        # the required first manual upload) silently skipped the GitHub
+        # Release attach too, since GitHub Actions skips all subsequent
+        # steps by default after any step fails.
+        if: always() && startsWith(github.ref, 'refs/tags/') && !cancelled()
         uses: softprops/action-gh-release@v2
         with:
           files: jetbrains/build/distributions/*.zip
