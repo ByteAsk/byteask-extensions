@@ -1,0 +1,17 @@
+id = "byteask"
+name = "ByteAsk"
+version = "0.1.0"
+schema_version = 1
+authors = ["ByteAsk <anirudha@byteask.ai>"]
+description = "Drive the ByteAsk C/C++ agentic coding harness from Zed -- slash commands plus a context-server integration for the native Agent Panel."
+repository = "https://github.com/ByteAsk/byteask-extensions"
+
+[slash_commands.byteask-exec]
+description = "Run `byteask exec <prompt>` and insert the result"
+requires_argument = true
+
+[slash_commands.byteask-review]
+description = "Run `byteask review` and insert the result"
+requires_argument = false
+
+[context_servers.byteask]

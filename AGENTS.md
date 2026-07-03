@@ -9,8 +9,8 @@ commands and just need the exact facts.
 
 Monorepo for ByteAsk editor connectors that don't need to live at their own
 repo root — currently `vscode-byteask/` (VS Code / Cursor / Windsurf /
-VSCodium) and `jetbrains/` (CLion / IntelliJ IDEA, in progress), with `zed/`
-and `emacs/` planned as siblings. The Neovim connector lives in the separate
+VSCodium), `jetbrains/` (CLion / IntelliJ IDEA), and `zed/` (Zed), with
+`emacs/` planned as a sibling. The Neovim connector lives in the separate
 repo `ByteAsk/ByteAsk.nvim` because Neovim plugin managers require plugin
 code at repo root — see that repo's own `AGENTS.md` for why. All drive the
 same `byteask` CLI.
@@ -229,3 +229,47 @@ signing — see [plugin-signing docs](https://plugins.jetbrains.com/docs/intelli
 Same self-skip convention as the VS Code secrets: the Marketplace publish
 step no-ops if `PUBLISH_TOKEN` is absent, so a GitHub-Release-only cut still
 works without them.
+
+## Zed extension (`zed/`) — build, test, publish
+
+Rust, compiled to `wasm32-wasip2` (Zed's sandboxed WASM extension model --
+no arbitrary FS/HTTP, no custom UI surface at all, confirmed against Zed's
+own extension docs and WIT interface). Requires the wasm target once:
+
+```bash
+rustup target add wasm32-wasip2
+rustup component add rustfmt clippy   # if not already present
+```
+
+```bash
+cd zed
+cargo fmt -- --check
+cargo clippy --target wasm32-wasip2 -- -D warnings
+cargo build --target wasm32-wasip2
+```
+
+**Two real API gaps discovered while building this, both documented in
+`zed/src/lib.rs`'s comments** -- don't assume either is fixable by trying a
+different method name; both were confirmed against the actual WIT interface
+(`~/.cargo/registry/.../zed_extension_api-<version>/wit/since_v0.6.0/extension.wit`),
+not docs, which lag the real API:
+- `zed_extension_api::process::Command` has **no working-directory control
+  at all** (just `{command, args, env}`).
+- `context_server_command` only receives a `Project`, which exposes
+  `worktree_ids() -> list<u64>` and **nothing else** -- no way to resolve an
+  actual `Worktree` handle or its `which()`-equivalent from there.
+
+Local dev-testing: Zed's Extensions page → **Install Dev Extension** → pick
+this directory (Zed cross-compiles for you). This is a real GUI action --
+if you're an agent without a display, you cannot verify this step yourself;
+say so rather than claiming it works.
+
+Publishing is **not** tag-triggered like VS Code/JetBrains -- there is no
+`zed-publish.yml`. The registry (`zed-industries/extensions`) is a separate
+GitHub repo you submit a PR to: fork it to a **personal** account (not an
+org, so Zed staff can push fixes), add this directory's repo as a git
+submodule, add an `extensions.toml` entry, run `pnpm sort-extensions`, open
+the PR. `scripts/release.sh zed --yes` still works for tagging a version
+checkpoint in this repo (useful for tracking which commit was submitted),
+it just doesn't trigger any automated publish the way the other connectors'
+tags do.

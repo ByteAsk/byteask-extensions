@@ -20,7 +20,7 @@ editors and every connector inherits new engine capabilities for free.
 |---|---|---|
 | Neovim | [`ByteAsk/ByteAsk.nvim`](https://github.com/ByteAsk/ByteAsk.nvim) (separate repo) | ✅ ready |
 | VS Code | [`vscode-byteask`](./vscode-byteask) | ✅ ready |
-| Zed | `zed-byteask` | 🛠 planned |
+| Zed | [`zed`](./zed) | 🚧 built (slash commands + context server), not yet submitted to the registry |
 | Emacs | `byteask.el` | 🛠 planned |
 | JetBrains (CLion/IDEA) | [`jetbrains`](./jetbrains) | 🚧 built, pending manual `runIde` verification |
 | Helix / Sublime | — | 🛠 planned |
