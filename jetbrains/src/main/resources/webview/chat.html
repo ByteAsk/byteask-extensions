@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      No CSP meta / nonce templating here (that was VS Code webview-specific
+      plumbing) -- this loads from a local file:// URL inside JCEF, and the
+      acquireVsCodeApi() bridge below is injected by
+      ByteAskChatToolWindowFactory.kt BEFORE this document's other scripts
+      run, so chat.js needs zero changes to work here: it only ever calls
+      acquireVsCodeApi().postMessage(...) and listens for
+      window.addEventListener('message', ...), both of which now go through
+      the JCEF bridge instead of VS Code's webview messaging.
+    -->
+    <link href="chat.css" rel="stylesheet" />
+    <title>ByteAsk Chat</title>
+  </head>
+  <body>
+    <div id="sessionHeader">
+      <span id="sessionTitle">New chat</span>
+      <div class="header-actions">
+        <button id="historyBtn" class="icon-btn" title="History">
+          <svg viewBox="0 0 16 16" width="15" height="15"><path fill="none" stroke="currentColor" stroke-width="1.3" d="M8 1.5a6.5 6.5 0 1 1-6.5 6.5"/><path fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" d="M8 4.5V8l2.5 1.5M1.5 4v3.5H5"/></svg>
+        </button>
+        <button id="newChatBtn" class="icon-btn" title="New chat">
+          <svg viewBox="0 0 16 16" width="15" height="15"><path fill="currentColor" d="M8 2a.75.75 0 0 1 .75.75V7.25H13.5a.75.75 0 0 1 0 1.5H8.75v4.5a.75.75 0 0 1-1.5 0V8.75H2.5a.75.75 0 0 1 0-1.5h4.75V2.75A.75.75 0 0 1 8 2Z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="historyPanel" class="hidden">
+      <input id="historySearch" placeholder="Search sessions..." />
+      <div id="historyList"></div>
+    </div>
+
+    <div id="welcome">
+      <svg class="logo" width="44" height="44" viewBox="0 0 24 24" fill="none">
+        <path d="M9 6 3.5 12 9 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 6 20.5 12 15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor"/>
+      </svg>
+      <div class="wordmark">ByteAsk</div>
+      <div class="tagline">Ask about this repo, request a change, or paste an error — ByteAsk reads the code and proposes a diff you approve.</div>
+    </div>
+
+    <div id="onboarding" class="hidden">
+      <svg class="logo" width="40" height="40" viewBox="0 0 24 24" fill="none">
+        <path d="M9 6 3.5 12 9 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 6 20.5 12 15 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor"/>
+      </svg>
+      <div id="obTitle" class="ob-title">ByteAsk CLI not found</div>
+      <div id="obBody" class="ob-body">This extension drives the <code>byteask</code> command-line tool. Install it, then retry.</div>
+      <div class="ob-actions">
+        <button id="obPrimaryBtn">Install ByteAsk</button>
+        <button id="obRetryBtn" class="secondary">I've installed it — Retry</button>
+      </div>
+      <details id="obManual">
+        <summary id="obManualSummary">Other ways to install</summary>
+        <div id="obManualInstall">
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">curl</div>
+            <code class="ob-manual-cmd" data-copy="curl -fsSL https://code.byteask.ai/install.sh | sh">curl -fsSL https://code.byteask.ai/install.sh | sh</code>
+          </div>
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">npm</div>
+            <code class="ob-manual-cmd" data-copy="npm install -g @byteask/cli">npm install -g @byteask/cli</code>
+          </div>
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">pip</div>
+            <code class="ob-manual-cmd" data-copy="pip install byteask">pip install byteask</code>
+          </div>
+        </div>
+        <div id="obManualLogin" class="hidden">
+          <div class="ob-manual-item">
+            <div class="ob-manual-label">CLI</div>
+            <code class="ob-manual-cmd" data-copy="byteask login --email you@company.com">byteask login --email you@company.com</code>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div id="messages"></div>
+
+    <div id="thinking" class="hidden">
+      <svg class="thinking-mark" viewBox="0 0 24 24" width="14" height="14" fill="none">
+        <path d="M9 6 3.5 12 9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M15 6 20.5 12 15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+      </svg>
+      <span id="thinkingLabel" class="shimmer">Thinking…</span>
+    </div>
+
+    <div id="attachments"></div>
+    <div id="composerBox">
+      <textarea id="input" rows="2" placeholder="Ask ByteAsk..."></textarea>
+      <div id="composerToolbar">
+        <div class="composerToolbarLeft">
+          <div class="menu-wrap">
+            <button id="plusBtn" class="icon-btn" title="Add context or attach a file">
+              <svg viewBox="0 0 16 16" width="15" height="15"><path fill="currentColor" d="M8 2a.75.75 0 0 1 .75.75V7.25H13.5a.75.75 0 0 1 0 1.5H8.75v4.5a.75.75 0 0 1-1.5 0V8.75H2.5a.75.75 0 0 1 0-1.5h4.75V2.75A.75.75 0 0 1 8 2Z"/></svg>
+            </button>
+            <div id="plusMenu" class="popup-menu hidden">
+              <div class="popup-item" data-action="uploadFile">
+                <span class="popup-item-icon">⬆</span><span>Upload from computer</span>
+              </div>
+              <div class="popup-item" data-action="mentionFile">
+                <span class="popup-item-icon">@</span><span>Add context</span>
+              </div>
+            </div>
+          </div>
+          <div class="menu-wrap">
+            <button id="slashBtn" class="icon-btn" title="Commands">
+              <svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M6.4 13.2 9.6 2.8h1.3L7.7 13.2H6.4Z"/><rect x="1.5" y="1.5" width="13" height="13" rx="3" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <div id="slashMenu" class="popup-menu wide hidden">
+              <input id="slashSearch" placeholder="Filter actions..." />
+              <div id="slashList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="composerToolbarRight">
+          <button id="sendBtn" class="icon-btn primary" title="Send">
+            <svg viewBox="0 0 16 16" width="14" height="14"><path fill="currentColor" d="M1.5 8 14 2.5l-3.2 11L7.4 9.6 1.5 8Zm5.9 1.5 2.9 3 1.8-6.4L7.4 9.5Z"/></svg>
+          </button>
+          <button id="stopBtn" class="icon-btn hidden" title="Stop">
+            <svg viewBox="0 0 16 16" width="12" height="12"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- BRIDGE_SCRIPT_PLACEHOLDER: ByteAskChatToolWindowFactory.kt replaces
+         this comment with the acquireVsCodeApi() shim, injected here so it
+         runs before chat.js (loaded next) calls it. -->
+    <script src="chat.js"></script>
+  </body>
+</html>

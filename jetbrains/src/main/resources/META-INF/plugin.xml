@@ -1,0 +1,65 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>ai.byteask.jetbrains</id>
+    <name>ByteAsk</name>
+    <vendor url="https://byteask.ai">ByteAsk</vendor>
+    <description><![CDATA[
+        <p>Drive the <a href="https://byteask.ai">ByteAsk</a> C/C++ agentic coding harness from CLion or IntelliJ IDEA
+        &mdash; interactive terminal, headless exec/review, apply diffs, and fix-diagnostics.</p>
+        <p>Requires the <code>byteask</code> CLI on <code>PATH</code> (<code>pip install --upgrade byteask</code>).</p>
+        <p><b>&#128172; Join the community:</b> <a href="https://discord.gg/vx5Eu4YNzG">discord.gg/vx5Eu4YNzG</a>
+        &mdash; community support, direct access to the team, and the fastest way to report an issue.
+        Direct email: <a href="mailto:anirudha@byteask.ai">anirudha@byteask.ai</a>.</p>
+    ]]></description>
+
+    <!-- Platform-only on purpose: keeps one plugin build loadable in both
+         CLion and IntelliJ IDEA. Anything CLion-specific (C/C++ PSI) should
+         be gated behind an optional dependency later, not added here. -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <resource-bundle>messages.ByteAskBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- Tier-3: the rich streaming chat sidebar (JCEF-hosted), the
+             flagship surface, same role as vscode-byteask's webview. -->
+        <toolWindow
+            factoryClass="ai.byteask.jetbrains.chat.ByteAskChatToolWindowFactory"
+            id="ByteAsk Chat"
+            anchor="right"
+            icon="/webview/icon.svg" />
+        <!-- Tier-1/2: plain console for headless exec/review/apply output. -->
+        <toolWindow
+            factoryClass="ai.byteask.jetbrains.toolWindow.ByteAskToolWindowFactory"
+            id="ByteAsk"
+            anchor="bottom" />
+        <projectConfigurable
+            parentId="tools"
+            instance="ai.byteask.jetbrains.settings.ByteAskConfigurable"
+            id="ai.byteask.jetbrains.settings.ByteAskConfigurable"
+            displayName="ByteAsk" />
+        <notificationGroup id="ByteAsk" displayType="BALLOON" />
+    </extensions>
+
+    <actions>
+        <group id="ByteAsk.MainMenu" text="ByteAsk" popup="true">
+            <add-to-group group-id="ToolsMenu" anchor="last" />
+            <action id="ByteAsk.OpenTerminal" class="ai.byteask.jetbrains.actions.OpenTerminalAction"
+                    text="Open ByteAsk Terminal" />
+            <action id="ByteAsk.Exec" class="ai.byteask.jetbrains.actions.ExecAction"
+                    text="Exec (Headless Prompt)" />
+            <action id="ByteAsk.ExecSelection" class="ai.byteask.jetbrains.actions.ExecSelectionAction"
+                    text="Exec on Selection" />
+            <action id="ByteAsk.FixDiagnostics" class="ai.byteask.jetbrains.actions.FixDiagnosticsAction"
+                    text="Fix Diagnostics in Active File" />
+            <action id="ByteAsk.Review" class="ai.byteask.jetbrains.actions.ReviewAction"
+                    text="Review Repository" />
+            <action id="ByteAsk.Apply" class="ai.byteask.jetbrains.actions.ApplyAction"
+                    text="Apply Latest Diff" />
+            <action id="ByteAsk.ResumeLast" class="ai.byteask.jetbrains.actions.ResumeLastAction"
+                    text="Resume Last Session" />
+            <action id="ByteAsk.Resume" class="ai.byteask.jetbrains.actions.ResumeAction"
+                    text="Resume Session…" />
+        </group>
+    </actions>
+</idea-plugin>

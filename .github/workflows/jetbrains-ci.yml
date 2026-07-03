@@ -1,0 +1,28 @@
+name: JetBrains CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['jetbrains/**', '.github/workflows/jetbrains-ci.yml']
+  pull_request:
+    paths: ['jetbrains/**', '.github/workflows/jetbrains-ci.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: jetbrains
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build
+        run: ./gradlew build --scan
+
+      - name: Verify plugin (structure/compatibility)
+        run: ./gradlew verifyPlugin

@@ -9,10 +9,11 @@ commands and just need the exact facts.
 
 Monorepo for ByteAsk editor connectors that don't need to live at their own
 repo root — currently `vscode-byteask/` (VS Code / Cursor / Windsurf /
-VSCodium), with `zed/`, `emacs/`, `jetbrains/` planned as siblings. The Neovim
-connector lives in the separate repo `ByteAsk/ByteAsk.nvim` because Neovim
-plugin managers require plugin code at repo root — see that repo's own
-`AGENTS.md` for why. Both drive the same `byteask` CLI.
+VSCodium) and `jetbrains/` (CLion / IntelliJ IDEA, in progress), with `zed/`
+and `emacs/` planned as siblings. The Neovim connector lives in the separate
+repo `ByteAsk/ByteAsk.nvim` because Neovim plugin managers require plugin
+code at repo root — see that repo's own `AGENTS.md` for why. All drive the
+same `byteask` CLI.
 
 ## If you're installing/using the VS Code extension in a project
 
@@ -157,3 +158,44 @@ pushing:
 brew install actionlint   # one-time
 actionlint .github/workflows/*.yml
 ```
+
+## JetBrains plugin (`jetbrains/`) — build, test, release
+
+Requires JDK 17+ (2025.1+ platform requires 21) — this repo's dev machine
+needed `brew install openjdk@21` since only 11 was present; no system-wide
+Gradle install needed, the wrapper (`./gradlew`) handles that itself.
+
+```bash
+cd jetbrains
+export JAVA_HOME=$(brew --prefix openjdk@21)/libexec/openjdk.jdk/Contents/Home
+./gradlew build            # compile + package the plugin zip
+./gradlew runIde            # launch a real sandbox IDE with it loaded -- the
+                             # only way to actually confirm the terminal
+                             # integration (see caveat below) and tool window
+./gradlew verifyPlugin      # structural/compatibility checks before a tag
+```
+
+**Known open verification item**: `OpenTerminalAction` casts the `TerminalWidget`
+returned by `TerminalToolWindowManager.createShellWidget()` to
+`ShellTerminalWidget` to call `executeCommand()` — confirmed as the current,
+non-deprecated entry point against intellij-community source, but IDEs with
+the newer "Reworked Terminal" engine enabled may not support that cast. Run
+`./gradlew runIde` and manually trigger "Open ByteAsk Terminal" to confirm
+before considering G1 fully done; the fallback (shell opens without
+auto-running the command) is not a crash either way.
+
+Release: tag-prefixed `jetbrains-v*` (own prefix, same convention as
+`vscode-v*`), triggers `jetbrains-publish.yml`. Unlike the VS Code channels,
+**the first-ever version must be uploaded manually** via
+plugins.jetbrains.com before `publishPlugin` can push anything automated —
+do this once, by hand, before relying on the tag-push flow. Every version
+after that (including updates) still goes through JetBrains' own manual
+moderation review (no fixed SLA; budget a few business days) — this is
+slower than the VS Code/Neovim channels, plan hotfix timing accordingly.
+
+Required secrets: `PUBLISH_TOKEN` (Marketplace vendor dashboard → Permanent
+Tokens), `PRIVATE_KEY` / `PRIVATE_KEY_PASSWORD` / `CERTIFICATE_CHAIN` (plugin
+signing — see [plugin-signing docs](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html)).
+Same self-skip convention as the VS Code secrets: the Marketplace publish
+step no-ops if `PUBLISH_TOKEN` is absent, so a GitHub-Release-only cut still
+works without them.
