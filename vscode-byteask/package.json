@@ -103,7 +103,7 @@
     "watch": "tsc -watch -p ./",
     "package": "vsce package",
     "test:ui": "playwright test",
-    "test:backend": "npm run compile && node tests/backend/cli-not-found.test.mjs && node tests/backend/not-logged-in.test.mjs",
+    "test:backend": "npm run compile && node tests/backend/cli-not-found.test.mjs && node tests/backend/not-logged-in.test.mjs && node tests/backend/windows-cmd-shim.test.mjs",
     "test": "npm run test:backend && npm run test:ui"
   },
   "devDependencies": {

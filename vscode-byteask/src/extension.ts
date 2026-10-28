@@ -12,6 +12,7 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { ChatViewProvider } from './chatViewProvider';
+import { cliSpawnSpec } from './cliCommand';
 
 let terminal: vscode.Terminal | undefined;
 let output: vscode.OutputChannel | undefined;
@@ -113,7 +114,11 @@ function runHeadless(sub: string[], title: string, applyAfter = false, withCommo
   out.appendLine('');
 
   headlessRunning = true;
-  const child = spawn(cfg.command, argv, { cwd: workspaceCwd() });
+  const spec = cliSpawnSpec(cfg.command, argv);
+  const child = spawn(spec.command, spec.args, {
+    cwd: workspaceCwd(),
+    windowsVerbatimArguments: spec.windowsVerbatimArguments,
+  });
 
   child.stdout.on('data', (d: Buffer) => out.append(d.toString()));
   child.stderr.on('data', (d: Buffer) => out.append(d.toString()));

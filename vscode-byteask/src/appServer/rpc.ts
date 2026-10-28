@@ -11,6 +11,7 @@
 
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import * as readline from 'readline';
+import { cliSpawnSpec } from '../cliCommand';
 
 export type RequestId = number | string;
 
@@ -81,7 +82,11 @@ export class AppServerRpc {
   private stderrBuffer: string[] = [];
 
   constructor(command: string, args: string[], cwd: string) {
-    this.proc = spawn(command, args, { cwd });
+    const spec = cliSpawnSpec(command, args);
+    this.proc = spawn(spec.command, spec.args, {
+      cwd,
+      windowsVerbatimArguments: spec.windowsVerbatimArguments,
+    });
 
     this.proc.on('error', (err) => {
       this.spawnError = err;
